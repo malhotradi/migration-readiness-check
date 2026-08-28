@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  mysql-source:
+    image: mysql:8.0
+    container_name: mysql-source
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: billing_db
+    # We purposely launch it with bad configurations (STATEMENT, GTID OFF) to test detection and remediations
+    command: --binlog-format=STATEMENT --gtid-mode=OFF --enforce-gtid-consistency=OFF
+    volumes:
+      - ./setup_mysql_mock.sql:/docker-entrypoint-initdb.d/setup_mysql_mock.sql
+
+  postgres-source:
+    image: postgres:14
+    container_name: postgres-source
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: rootpassword
+      POSTGRES_DB: customer_db
+    # We run PG with 'replica' WAL level, which is insufficient for logical replication (needs 'logical')
+    command: postgres -c wal_level=replica -c max_wal_senders=0
+    volumes:
+      - ./setup_postgres_mock.sql:/docker-entrypoint-initdb.d/setup_postgres_mock.sql

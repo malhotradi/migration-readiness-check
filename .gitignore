@@ -1,0 +1,25 @@
+# Python virtual environment
+venv/
+.venv/
+env/
+
+# Python compiled files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Dynamic reports and checklists (generated playbooks)
+*.md
+*.csv
+!README.md
+!sandbox/setup_mysql_mock.sql
+!sandbox/setup_postgres_mock.sql
+
+# Local IDE configuration
+.vscode/
+.idea/
