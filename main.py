@@ -406,16 +406,21 @@ HTML_CONTENT = """
 
     <!-- Interactive Decision Modal -->
     <div id="decision-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50">
-        <div class="relative p-6 border w-96 shadow-lg rounded-md bg-white space-y-4">
+        <div class="relative p-6 border w-[480px] max-w-lg shadow-lg rounded-md bg-white space-y-4">
             <div class="text-center">
                 <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100 text-yellow-600 mb-2">
                     <i class="fa-solid fa-triangle-exclamation text-2xl"></i>
                 </div>
                 <h3 class="text-lg leading-6 font-medium text-gray-900">Issues Detected</h3>
                 <div class="mt-2 px-7 py-3">
-                    <p class="text-sm text-gray-500">
+                    <p class="text-sm text-gray-500 mb-3">
                         The diagnostics check failed on some source database configurations. Would you like the agent to fix these issues automatically, or just generate the manual runbook?
                     </p>
+                    <!-- Dynamic issues list -->
+                    <div class="text-left bg-gray-50 rounded-lg p-3 border border-gray-200 max-h-48 overflow-y-auto">
+                        <p class="text-xs font-bold text-gray-600 mb-2 uppercase tracking-wide"><i class="fa-solid fa-screwdriver-wrench mr-1"></i>Found gaps I can fix:</p>
+                        <ul id="modal-issues-list" class="list-disc list-inside text-xs text-gray-500 space-y-1.5 leading-normal"></ul>
+                    </div>
                 </div>
             </div>
             <div class="flex flex-col space-y-2">
@@ -583,6 +588,34 @@ HTML_CONTENT = """
                 if (hasFailures) {
                     lastPayload = payload;
                     lastData = data;
+                    
+                    // Populate issues list in the modal dynamically
+                    const listElement = document.getElementById('modal-issues-list');
+                    listElement.innerHTML = "";
+                    
+                    const failedSteps = [];
+                    if (data.source_steps) {
+                        data.source_steps.forEach(step => {
+                            if (step.status === 'FAIL' || step.status === 'WARNING') {
+                                failedSteps.push(step);
+                            }
+                        });
+                    }
+                    if (data.target_steps) {
+                        data.target_steps.forEach(step => {
+                            if (step.status === 'FAIL' || step.status === 'WARNING') {
+                                failedSteps.push(step);
+                            }
+                        });
+                    }
+                    
+                    failedSteps.forEach(step => {
+                        const li = document.createElement('li');
+                        li.className = "pl-1";
+                        li.innerHTML = `<span class="font-bold text-gray-700">${step.title}</span>: ${step.description}`;
+                        listElement.appendChild(li);
+                    });
+
                     document.getElementById('decision-modal').classList.remove('hidden');
                 } else {
                     renderResults(data, databaseName, mode);
