@@ -686,10 +686,10 @@ def check_mysql_readiness(
               AND TABLE_TYPE = 'BASE TABLE';
         """)
         db_metrics = cursor.fetchone()
-        total_bytes = db_metrics["total_bytes"] if db_metrics and db_metrics["total_bytes"] is not None else 0
+        total_bytes = int(db_metrics["total_bytes"]) if db_metrics and db_metrics["total_bytes"] is not None else 0
         total_tables = db_metrics["total_tables"] if db_metrics else 0
         
-        total_gb = total_bytes / (1024 * 1024 * 1024)
+        total_gb = float(total_bytes) / (1024 * 1024 * 1024)
         
         # Check for large tables (> 50 GB or > 10M rows)
         cursor.execute(f"""
@@ -721,7 +721,7 @@ def check_mysql_readiness(
                     {
                         "table_name": row["TABLE_NAME"],
                         "rows": row["TABLE_ROWS"],
-                        "size_gb": row["size_bytes"] / (1024 * 1024 * 1024)
+                        "size_gb": float(row["size_bytes"]) / (1024 * 1024 * 1024)
                     }
                     for row in large_tables
                 ]
@@ -819,4 +819,16 @@ def check_mysql_readiness(
             remediation="Verify that the migration user has SELECT access to INFORMATION_SCHEMA and SHOW GLOBAL VARIABLES permission."
         )
 
-    return report
+    def sanitize_decimals(val: Any) -> Any:
+        import decimal
+        if isinstance(val, decimal.Decimal):
+            if val % 1 == 0:
+                return int(val)
+            return float(val)
+        elif isinstance(val, dict):
+            return {k: sanitize_decimals(v) for k, v in val.items()}
+        elif isinstance(val, list):
+            return [sanitize_decimals(item) for item in val]
+        return val
+
+    return sanitize_decimals(report)

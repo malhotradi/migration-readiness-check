@@ -185,8 +185,8 @@ def check_oracle_readiness(
         try:
             cursor.execute("SELECT SUM(bytes) FROM dba_data_files")
             bytes_row = cursor.fetchone()
-            total_bytes = bytes_row[0] if bytes_row and bytes_row[0] is not None else 0
-            size_gb = total_bytes / (1024 * 1024 * 1024)
+            total_bytes = int(bytes_row[0]) if bytes_row and bytes_row[0] is not None else 0
+            size_gb = float(total_bytes) / (1024 * 1024 * 1024)
             
             add_check(
                 category="Scale & Capacity",
@@ -304,4 +304,16 @@ def check_oracle_readiness(
             remediation="Ensure the Oracle migration user has CREATE SESSION and SELECT ANY DICTIONARY privileges."
         )
 
-    return report
+    def sanitize_decimals(val: Any) -> Any:
+        import decimal
+        if isinstance(val, decimal.Decimal):
+            if val % 1 == 0:
+                return int(val)
+            return float(val)
+        elif isinstance(val, dict):
+            return {k: sanitize_decimals(v) for k, v in val.items()}
+        elif isinstance(val, list):
+            return [sanitize_decimals(item) for item in val]
+        return val
+
+    return sanitize_decimals(report)

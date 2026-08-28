@@ -314,4 +314,16 @@ def check_sqlserver_readiness(
             remediation="Ensure the database migration user has SELECT access to sys schemas and VIEW DATABASE STATE permissions."
         )
 
-    return report
+    def sanitize_decimals(val: Any) -> Any:
+        import decimal
+        if isinstance(val, decimal.Decimal):
+            if val % 1 == 0:
+                return int(val)
+            return float(val)
+        elif isinstance(val, dict):
+            return {k: sanitize_decimals(v) for k, v in val.items()}
+        elif isinstance(val, list):
+            return [sanitize_decimals(item) for item in val]
+        return val
+
+    return sanitize_decimals(report)
