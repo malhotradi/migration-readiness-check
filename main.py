@@ -21,7 +21,8 @@ from test_locally import run_agent_locally, map_source_engine, map_target_engine
 # Create the base FastAPI app from ADK
 app = get_fast_api_app(
     agents_dir=AGENT_DIR,
-    web=False
+    web=False,
+    allow_origins=["*"]
 )
 
 HTML_CONTENT = """
