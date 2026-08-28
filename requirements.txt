@@ -1,0 +1,13 @@
+google-adk
+fastapi
+uvicorn
+requests
+mysql-connector-python
+pg8000
+pymssql
+oracledb
+google-api-python-client
+google-auth
+pydantic
+python-multipart
+jinja2
