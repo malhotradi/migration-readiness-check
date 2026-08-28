@@ -321,13 +321,39 @@ HTML_CONTENT = """
             
             <!-- Default Welcome Display -->
             <div id="welcome-pane" class="flex-grow flex flex-col items-center justify-center text-center p-8 bg-white border border-gray-200 rounded-xl shadow-sm space-y-4">
-                <div class="bg-blue-50 p-6 rounded-full text-blue-500">
-                    <i class="fa-solid fa-file-shield text-5xl"></i>
+                <div class="bg-blue-100 p-6 rounded-full text-blue-600 animate-bounce">
+                    <i class="fa-solid fa-robot text-5xl"></i>
                 </div>
-                <div class="max-w-md">
-                    <h2 class="text-2xl font-bold text-gray-900 mb-2">Ready to Run Readiness Checks</h2>
-                    <p class="text-sm text-gray-500 leading-relaxed">
-                        Configure the settings in the sidebar panel and click the button to generate a migration playbook or run automated live connectivity audits.
+                <div class="max-w-lg space-y-4">
+                    <h2 class="text-2xl font-bold text-gray-900">Hello! I'm your Migration Readiness Agent.</h2>
+                    <p class="text-sm text-gray-600 leading-relaxed">
+                        I am here to guide you through auditing, sizing, and preparing your databases for cloud migration. I can dynamically analyze configurations, warn you of active lock risks, and perform auto-remediations!
+                    </p>
+                    
+                    <div class="border-t border-gray-100 my-4 pt-4 text-left">
+                        <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">What I can do for you:</h4>
+                        <ul class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-gray-600">
+                            <li class="flex items-start">
+                                <i class="fa-solid fa-circle-check text-green-500 mr-2 mt-0.5"></i>
+                                <span><strong>Pre-Migration Audits</strong>: Inspect configurations, users, permissions, versions, and MyISAM tables.</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fa-solid fa-circle-check text-green-500 mr-2 mt-0.5"></i>
+                                <span><strong>Target Sizing Advice</strong>: Recommend instance sizes (vCPUs/Memory/Storage) based on database size & load.</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fa-solid fa-circle-check text-green-500 mr-2 mt-0.5"></i>
+                                <span><strong>Firewall Constructor</strong>: Detect port blocks and output target <code>gcloud</code> firewall rules.</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fa-solid fa-circle-check text-green-500 mr-2 mt-0.5"></i>
+                                <span><strong>Active Load Checks</strong>: Audit current active connections and InnoDB lock waits to prevent crashes.</span>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <p class="text-xs text-blue-600 font-semibold bg-blue-50 py-2 px-4 rounded-lg inline-block">
+                        👈 Configure your settings in the sidebar to get started!
                     </p>
                 </div>
             </div>
@@ -347,6 +373,15 @@ HTML_CONTENT = """
             <!-- Results Output -->
             <div id="results-pane" class="hidden flex-grow flex flex-col bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden min-h-[500px]">
                 
+                <!-- Agent Guide Banner -->
+                <div id="agent-guide-banner" class="bg-blue-50 border-b border-blue-100 px-6 py-3 flex items-start space-x-3 text-sm text-blue-800">
+                    <i class="fa-solid fa-comment-dots text-lg text-blue-500 mt-0.5"></i>
+                    <div>
+                        <p class="font-semibold">Agent Advice & Next Steps:</p>
+                        <p id="agent-advice-text" class="text-xs text-blue-700 mt-0.5">I have analyzed your environment. Download the checklist, execute outstanding manual fixes, or configure replication settings on the target.</p>
+                    </div>
+                </div>
+
                 <!-- Action Buttons & Header -->
                 <div class="bg-gray-50 border-b border-gray-200 px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-2 sm:space-y-0">
                     <h2 class="font-bold text-gray-900"><i class="fa-solid fa-file-lines mr-1.5 text-blue-600"></i>Generated Assessment Output</h2>
@@ -456,13 +491,35 @@ HTML_CONTENT = """
             }
         }
 
-        function renderResults(md, csv, dbName) {
+        function renderResults(data, dbName, mode) {
+            const md = data.markdown_playbook || data.playbook_markdown || "";
+            const csv = data.csv_playbook || data.playbook_csv || "";
             generatedPlaybookMarkdown = md;
             generatedPlaybookCSV = csv;
             lastDatabaseName = dbName;
 
             document.getElementById('markdown-container').innerHTML = marked.parse(md);
             
+            // Dynamic Agent Advice Logic
+            const adviceText = document.getElementById('agent-advice-text');
+            if (mode === 'Evaluate CSV') {
+                const hasFailures = md.includes('🔴 FAIL') || md.includes('🟡 WARNING');
+                if (hasFailures) {
+                    adviceText.innerText = "I have evaluated your manual spreadsheet checklist. Some checks still require attention (marked in RED/YELLOW). Execute the fixes and re-verify when ready.";
+                } else {
+                    adviceText.innerText = "Excellent news! I have validated your manual checklist. All requirements are satisfied. You are ready to start the migration!";
+                }
+            } else if (mode === 'Run Automated Diagnostics') {
+                const hasFailures = md.includes('🔴 FAIL') || md.includes('🟡 WARNING');
+                if (hasFailures) {
+                    adviceText.innerText = "I detected configuration gaps during live analysis. Select 'Yes, Let Agent Fix' to let me attempt auto-remediation, or manually execute the checklist steps.";
+                } else {
+                    adviceText.innerText = "Perfect! I ran live audits on your source and target and verified everything is fully ready. You can safely schedule replication!";
+                }
+            } else {
+                adviceText.innerText = "I have compiled a custom static migration checklist. Next steps: Run these queries manually on your source DB, write findings in the CSV, and upload it in 'Evaluate CSV' tab.";
+            }
+
             document.getElementById('welcome-pane').classList.add('hidden');
             document.getElementById('results-pane').classList.remove('hidden');
         }
@@ -528,7 +585,7 @@ HTML_CONTENT = """
                     lastData = data;
                     document.getElementById('decision-modal').classList.remove('hidden');
                 } else {
-                    renderResults(data.markdown_playbook, data.csv_playbook, databaseName);
+                    renderResults(data, databaseName, mode);
                 }
             } catch (err) {
                 showLoading(false);
@@ -557,7 +614,7 @@ HTML_CONTENT = """
                     return;
                 }
 
-                renderResults(data.markdown_playbook, data.csv_playbook, lastPayload.database_name);
+                renderResults(data, lastPayload.database_name, lastPayload.execution_mode);
             } catch (err) {
                 showLoading(false);
                 alert(`Remediation failed: ${err.message}`);
@@ -567,7 +624,7 @@ HTML_CONTENT = """
         function declineAutoFix() {
             document.getElementById('decision-modal').classList.add('hidden');
             // Just display the failed report/playbook
-            renderResults(lastData.markdown_playbook, lastData.csv_playbook, lastPayload.database_name);
+            renderResults(lastData, lastPayload.database_name, lastPayload.execution_mode);
         }
 
         async function handleEvaluationSubmit(e) {
@@ -604,7 +661,7 @@ HTML_CONTENT = """
                     return;
                 }
 
-                renderResults(data.markdown_playbook, data.csv_playbook, database);
+                renderResults(data, database, 'Evaluate CSV');
             } catch (err) {
                 showLoading(false);
                 alert(`Request failed: ${err.message}`);
